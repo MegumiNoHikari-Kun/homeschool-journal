@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-paper text-ink font-body antialiased; }
+:focus-visible { outline: 2px solid #1F6F5C; outline-offset: 2px; }
+.field { @apply w-full rounded-md border border-line bg-white px-3 py-2 text-base; }
+.btn { @apply inline-flex items-center justify-center rounded-md bg-leaf px-4 py-2 font-medium text-white hover:bg-ink disabled:opacity-50; }
