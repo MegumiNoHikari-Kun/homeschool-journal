@@ -11,6 +11,7 @@ type Category struct {
 type Block struct {
 	Text     string   `json:"text"`
 	Images   []string `json:"images"`
+	Captions []string `json:"captions"`
 	VideoURL string   `json:"video_url"`
 }
 

@@ -34,6 +34,7 @@ CREATE TABLE activities (
     image_caption TEXT,
     video_url TEXT,
     likes_count INT DEFAULT 0,
+    blocks JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

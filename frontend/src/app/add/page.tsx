@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 
-type BlockForm = { text: string; files: File[]; video_url: string };
+type BlockForm = { text: string; files: { file: File; caption: string }[]; video_url: string };
 const emptyBlock = (): BlockForm => ({ text: '', files: [], video_url: '' });
 
 export default function AddActivity() {
@@ -44,8 +44,9 @@ export default function AddActivity() {
       const out = [];
       for (const b of blocks) {
         const images: string[] = [];
-        for (const file of b.files) images.push(await upload(file));
-        const block = { text: b.text.trim(), images, video_url: b.video_url.trim() };
+        const captions: string[] = [];
+        for (const { file, caption } of b.files) { images.push(await upload(file)); captions.push(caption.trim()); }
+        const block = { text: b.text.trim(), images, captions, video_url: b.video_url.trim() };
         if (block.text || images.length || block.video_url) out.push(block);
       }
       await api('/api/activities', {
@@ -96,12 +97,14 @@ export default function AddActivity() {
           <textarea className="field" rows={3} placeholder="Cerita bagian ini…" value={b.text}
             onChange={(e) => setBlock(i, { text: e.target.value })} />
           <input type="file" accept="image/*" multiple className="field"
-            onChange={(e) => { setBlock(i, { files: [...b.files, ...Array.from(e.target.files ?? [])] }); e.target.value = ''; }} />
+            onChange={(e) => { setBlock(i, { files: [...b.files, ...Array.from(e.target.files ?? []).map((file) => ({ file, caption: '' }))] }); e.target.value = ''; }} />
           {b.files.length > 0 && (
-            <ul className="space-y-1 text-xs text-slate-600">
-              {b.files.map((file, k) => (
-                <li key={k} className="flex items-center justify-between">
-                  <span className="truncate">{file.name}</span>
+            <ul className="space-y-2">
+              {b.files.map((it, k) => (
+                <li key={k} className="flex items-center gap-2 text-xs text-slate-600">
+                  <span className="w-24 shrink-0 truncate">{it.file.name}</span>
+                  <input className="field !py-1.5 !text-xs" placeholder="Keterangan foto (opsional)" value={it.caption}
+                    onChange={(e) => setBlock(i, { files: b.files.map((x, j) => (j === k ? { ...x, caption: e.target.value } : x)) })} />
                   <button type="button" aria-label="Hapus foto" className="px-2 text-red-600"
                     onClick={() => setBlock(i, { files: b.files.filter((_, j) => j !== k) })}>×</button>
                 </li>
