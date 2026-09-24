@@ -25,8 +25,8 @@ export default function Login() {
   }
 
   return (
-    <form onSubmit={submit} className="mx-auto max-w-sm space-y-4">
-      <h1 className="font-display text-3xl font-bold">{signup ? 'Buat akun keluarga' : 'Masuk'}</h1>
+    <form onSubmit={submit} className="mx-auto max-w-sm space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h1 className="text-2xl font-bold text-slate-900">{signup ? 'Buat akun keluarga' : 'Masuk'}</h1>
       {signup && (
         <label className="block">Nama lengkap
           <input className="field mt-1" required value={name} onChange={(e) => setName(e.target.value)} />

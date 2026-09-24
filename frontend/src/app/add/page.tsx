@@ -55,8 +55,8 @@ export default function AddActivity() {
   }
 
   return (
-    <form onSubmit={submit} className="max-w-xl space-y-4">
-      <h1 className="font-display text-3xl font-bold">Tulis jurnal</h1>
+    <form onSubmit={submit} className="mx-auto max-w-xl space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <h1 className="text-2xl font-bold text-slate-900">Tulis jurnal</h1>
       <label className="block">Judul kegiatan
         <input className="field mt-1" required value={f.title} onChange={set('title')} /></label>
       <div className="grid grid-cols-2 gap-4">
