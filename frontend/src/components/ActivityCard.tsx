@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { catOf, toEmbed } from '@/lib/categories';
 
+export type Block = { text: string; images: string[]; video_url: string };
+
 export type Activity = {
   id: number;
   user_id: string;
@@ -17,7 +19,32 @@ export type Activity = {
   category_name: string | null;
   category_color: string | null;
   author_name: string | null;
+  blocks: Block[];
 };
+
+function BlockView({ b, title }: { b: Block; title: string }) {
+  const embed = toEmbed(b.video_url);
+  const imgs = b.images ?? [];
+  return (
+    <div className="space-y-3 border-t border-slate-100 pt-4">
+      {b.text && <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{b.text}</p>}
+      {imgs.length > 0 && (
+        <div className={`grid gap-2 ${imgs.length > 1 ? 'grid-cols-2' : ''}`}>
+          {imgs.map((u) => (
+            <img key={u} src={u} alt={title} className="aspect-video w-full rounded-2xl border border-slate-100 object-cover" />
+          ))}
+        </div>
+      )}
+      {embed ? (
+        <div className="aspect-video overflow-hidden rounded-2xl bg-slate-900">
+          <iframe src={embed} title={title} className="h-full w-full" allowFullScreen />
+        </div>
+      ) : (
+        b.video_url && <a href={b.video_url} target="_blank" rel="noreferrer" className="text-sm text-orange-600 underline">Tonton video</a>
+      )}
+    </div>
+  );
+}
 
 export default function ActivityCard({
   a, isOwner, onDeleted,
@@ -80,6 +107,7 @@ export default function ActivityCard({
       <div className="space-y-4 p-6">
         <h2 className="text-lg font-bold leading-snug text-slate-900 sm:text-xl">{a.title}</h2>
         <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">{a.description}</p>
+        {a.blocks?.map((b, i) => <BlockView key={i} b={b} title={a.title} />)}
         {a.image_url && (
           <div className="space-y-1.5 pt-2">
             <div className="aspect-video overflow-hidden rounded-2xl border border-slate-100 bg-slate-100">

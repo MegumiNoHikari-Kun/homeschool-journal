@@ -7,6 +7,13 @@ type Category struct {
 	Color *string `json:"color"`
 }
 
+// Block = satu bagian kegiatan: cerita + beberapa foto + video.
+type Block struct {
+	Text     string   `json:"text"`
+	Images   []string `json:"images"`
+	VideoURL string   `json:"video_url"`
+}
+
 type Activity struct {
 	ID            int64   `json:"id"`
 	UserID        string  `json:"user_id"`
@@ -22,6 +29,7 @@ type Activity struct {
 	VideoURL      *string `json:"video_url"`
 	LikesCount    int     `json:"likes_count"`
 	AuthorName    *string `json:"author_name"`
+	Blocks        []Block `json:"blocks"`
 }
 
 type ActivityInput struct {
@@ -33,4 +41,5 @@ type ActivityInput struct {
 	ImageURL     *string `json:"image_url"`
 	ImageCaption *string `json:"image_caption"`
 	VideoURL     *string `json:"video_url"`
+	Blocks       []Block `json:"blocks"`
 }

@@ -4,18 +4,22 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { api } from '@/lib/api';
 
+type BlockForm = { text: string; files: File[]; video_url: string };
+const emptyBlock = (): BlockForm => ({ text: '', files: [], video_url: '' });
+
 export default function AddActivity() {
   const router = useRouter();
   const [cats, setCats] = useState<{ id: number; name: string }[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [blocks, setBlocks] = useState<BlockForm[]>([emptyBlock()]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [f, setF] = useState({
-    title: '', activity_date: new Date().toISOString().slice(0, 10), category_id: '',
-    location: '', description: '', image_caption: '', video_url: '',
+    title: '', activity_date: new Date().toISOString().slice(0, 10), category_id: '', location: '', description: '',
   });
   const set = (k: string) => (e: React.ChangeEvent<any>) => setF({ ...f, [k]: e.target.value });
+  const setBlock = (i: number, patch: Partial<BlockForm>) =>
+    setBlocks((bs) => bs.map((b, j) => (j === i ? { ...b, ...patch } : b)));
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -25,30 +29,36 @@ export default function AddActivity() {
     api<{ id: number; name: string }[]>('/api/categories').then(setCats).catch(() => {});
   }, [router]);
 
+  async function upload(file: File) {
+    const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${file.name.replace(/[^\w.-]/g, '_')}`;
+    const { error } = await supabase.storage.from('journal').upload(path, file);
+    if (error) throw new Error('Foto gagal diunggah: ' + error.message);
+    return supabase.storage.from('journal').getPublicUrl(path).data.publicUrl;
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!userId) return;
     setBusy(true); setMsg('');
-    let image_url: string | null = null;
-    if (file) {
-      const path = `${userId}/${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-      const { error } = await supabase.storage.from('journal').upload(path, file);
-      if (error) { setBusy(false); return setMsg('Foto gagal diunggah: ' + error.message); }
-      image_url = supabase.storage.from('journal').getPublicUrl(path).data.publicUrl;
-    }
     try {
+      const out = [];
+      for (const b of blocks) {
+        const images: string[] = [];
+        for (const file of b.files) images.push(await upload(file));
+        const block = { text: b.text.trim(), images, video_url: b.video_url.trim() };
+        if (block.text || images.length || block.video_url) out.push(block);
+      }
       await api('/api/activities', {
         method: 'POST', auth: true,
         body: {
           title: f.title, activity_date: f.activity_date,
           category_id: f.category_id ? Number(f.category_id) : null,
-          location: f.location, description: f.description,
-          image_url, image_caption: f.image_caption || null, video_url: f.video_url || null,
+          location: f.location, description: f.description, blocks: out,
         },
       });
       router.push('/');
     } catch (err) {
-      setMsg('Jurnal gagal disimpan: ' + (err as Error).message);
+      setMsg((err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -70,16 +80,43 @@ export default function AddActivity() {
       </div>
       <label className="block">Lokasi
         <input className="field mt-1" required value={f.location} onChange={set('location')} /></label>
-      <label className="block">Cerita kegiatan
-        <textarea className="field mt-1" rows={6} required value={f.description} onChange={set('description')} /></label>
-      <label className="block">Foto
-        <input type="file" accept="image/*" className="field mt-1" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>
-      <label className="block">Keterangan foto
-        <input className="field mt-1" value={f.image_caption} onChange={set('image_caption')} /></label>
-      <label className="block">Tautan video (opsional)
-        <input type="url" className="field mt-1" value={f.video_url} onChange={set('video_url')} /></label>
+      <label className="block">Ringkasan kegiatan
+        <textarea className="field mt-1" rows={3} required value={f.description} onChange={set('description')} /></label>
+
+      <h2 className="pt-2 font-bold text-slate-900">Bagian kegiatan</h2>
+      {blocks.map((b, i) => (
+        <div key={i} className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+          <div className="flex items-center justify-between text-sm font-semibold">
+            Bagian {i + 1}
+            {blocks.length > 1 && (
+              <button type="button" className="text-xs text-red-600 underline"
+                onClick={() => setBlocks((bs) => bs.filter((_, j) => j !== i))}>Hapus bagian</button>
+            )}
+          </div>
+          <textarea className="field" rows={3} placeholder="Cerita bagian ini…" value={b.text}
+            onChange={(e) => setBlock(i, { text: e.target.value })} />
+          <input type="file" accept="image/*" multiple className="field"
+            onChange={(e) => { setBlock(i, { files: [...b.files, ...Array.from(e.target.files ?? [])] }); e.target.value = ''; }} />
+          {b.files.length > 0 && (
+            <ul className="space-y-1 text-xs text-slate-600">
+              {b.files.map((file, k) => (
+                <li key={k} className="flex items-center justify-between">
+                  <span className="truncate">{file.name}</span>
+                  <button type="button" aria-label="Hapus foto" className="px-2 text-red-600"
+                    onClick={() => setBlock(i, { files: b.files.filter((_, j) => j !== k) })}>×</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <input type="url" className="field" placeholder="Tautan video YouTube (opsional)" value={b.video_url}
+            onChange={(e) => setBlock(i, { video_url: e.target.value })} />
+        </div>
+      ))}
+      <button type="button" className="text-sm font-medium text-orange-600 underline"
+        onClick={() => setBlocks((bs) => [...bs, emptyBlock()])}>+ Tambah bagian</button>
+
       {msg && <p role="alert" className="text-sm text-red-700">{msg}</p>}
-      <button className="btn" disabled={busy}>{busy ? 'Menyimpan…' : 'Simpan jurnal'}</button>
+      <button className="btn w-full" disabled={busy}>{busy ? 'Menyimpan… (foto sedang diunggah)' : 'Simpan jurnal'}</button>
     </form>
   );
 }
